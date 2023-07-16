@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Patent Term Extension Calculator</title>
+  <style>
+    /* Add some basic styling to the page */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input[type="text"] {
+      width: 200px;
+    }
+    button {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Patent Term Extension Calculator</h1>
+  
+  <form id="pteForm" action="/calculate-pte" method="POST">
+    <label for="patentNumber">Patent Number:</label>
+    <input type="text" id="patentNumber" required>
+    
+    <label for="indFilingDate">IND Filing Date:</label>
+    <input type="date" id="indFilingDate" required>
+    
+    <label for="patentIssuanceDate">Patent Issuance Date:</label>
+    <input type="date" id="patentIssuanceDate" required>
+    
+    <label for="ndaSubmissionDate">NDA Submission Date:</label>
+    <input type="date" id="ndaSubmissionDate" required>
+    
+    <label for="ndaApprovalDate">NDA Approval Date:</label>
+    <input type="date" id="ndaApprovalDate" required>
+    
+    <label for="originalExpirationDate">Original Expiration Date:</label>
+    <input type="date" id="originalExpirationDate" required>
+    
+    <button type="submit">Calculate PTE</button>
+  </form>
+  
+  <div id="result" style="display: none;">
+    <h2>Result:</h2>
+    <p id="patentNumberResult"></p>
+    <p id="originalExpirationDateResult"></p>
+    <p id="pteYearsResult"></p>
+    <p id="pteDaysResult"></p>
+    <p id="finalExpirationDateResult"></p>
+  </div>
+  
+  <script>
+    // Add JavaScript code here
+    document.getElementById('pteForm').addEventListener('submit', async function(event) {
+      event.preventDefault();
+
+      const patentNumber = document.getElementById('patentNumber').value;
+      const indFilingDate = document.getElementById('indFilingDate').value;
+      const patentIssuanceDate = document.getElementById('patentIssuanceDate').value;
+      const ndaSubmissionDate = document.getElementById('ndaSubmissionDate').value;
+      const ndaApprovalDate = document.getElementById('ndaApprovalDate').value;
+      const originalExpirationDate = document.getElementById('originalExpirationDate').value;
+
+      try {
+        const response = await fetch('/calculate-pte', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            patentNumber,
+            indFilingDate,
+            patentIssuanceDate,
+            ndaSubmissionDate,
+            ndaApprovalDate,
+            originalExpirationDate,
+          }),
+        });
+
+        const result = await response.json();
+        displayResult(result);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    });
+
+    function displayResult(result) {
+      const patentNumberResult = document.getElementById('patentNumberResult');
+      const originalExpirationDateResult = document.getElementById('originalExpirationDateResult');
+      const pteYearsResult = document.getElementById('pteYearsResult');
+      const pteDaysResult = document.getElementById('pteDaysResult');
+      const finalExpirationDateResult = document.getElementById('finalExpirationDateResult');
+      const resultDiv = document.getElementById('result');
+
+      patentNumberResult.textContent = 'Patent Number: ' + result.patent_number;
+      originalExpirationDateResult.textContent = 'Original Expiration Date: ' + result.original_expiration_date;
+      pteYearsResult.textContent = 'Patent Term Extension (in years): ' + result.pte_years;
+      pteDaysResult.textContent = 'Patent Term Extension (in days): ' + result.pte_days;
+      finalExpirationDateResult.textContent = 'Final Expiration Date: ' + result.final_expiration_date;
+
+      resultDiv.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
