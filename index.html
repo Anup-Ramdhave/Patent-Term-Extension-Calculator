@@ -1,32 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Patent Term Extension Calculator</title>
   <style>
-    /* Add some basic styling to the page */
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    h1 {
-      color: #333;
-    }
+    /* Add custom CSS styles for better line spacing */
     label {
       display: block;
-      margin-top: 10px;
+      margin-bottom: 10px;
     }
-    input[type="text"] {
-      width: 200px;
+
+    input[type="text"],
+    input[type="date"] {
+      margin-bottom: 10px;
     }
+
     button {
       margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>Patent Term Extension Calculator</h1>
-  
-  <form id="pteForm" action="/calculate-pte" method="POST">
+  <form id="pteForm">
     <label for="patentNumber">Patent Number:</label>
     <input type="text" id="patentNumber" required>
     
@@ -49,17 +42,13 @@
   </form>
   
   <div id="result" style="display: none;">
-    <h2>Result:</h2>
-    <p id="patentNumberResult"></p>
-    <p id="originalExpirationDateResult"></p>
-    <p id="pteYearsResult"></p>
-    <p id="pteDaysResult"></p>
-    <p id="finalExpirationDateResult"></p>
+    <!-- Result section -->
   </div>
   
+  <button id="copyButton" style="display: none;">Copy Results</button>
+  
   <script>
-    // Add JavaScript code here
-    document.getElementById('pteForm').addEventListener('submit', async function(event) {
+    document.getElementById('pteForm').addEventListener('submit', function(event) {
       event.preventDefault();
 
       const patentNumber = document.getElementById('patentNumber').value;
@@ -69,45 +58,69 @@
       const ndaApprovalDate = document.getElementById('ndaApprovalDate').value;
       const originalExpirationDate = document.getElementById('originalExpirationDate').value;
 
-      try {
-        const response = await fetch('/calculate-pte', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            patentNumber,
-            indFilingDate,
-            patentIssuanceDate,
-            ndaSubmissionDate,
-            ndaApprovalDate,
-            originalExpirationDate,
-          }),
-        });
+      const indFilingDateTime = new Date(indFilingDate).getTime();
+      const patentIssuanceDateTime = new Date(patentIssuanceDate).getTime();
+      const ndaSubmissionDateTime = new Date(ndaSubmissionDate).getTime();
+      const ndaApprovalDateTime = new Date(ndaApprovalDate).getTime();
+      const originalExpirationDateTime = new Date(originalExpirationDate).getTime();
 
-        const result = await response.json();
-        displayResult(result);
-      } catch (error) {
-        console.error('Error:', error);
+      const halfTestingTime = Math.max(indFilingDateTime, patentIssuanceDateTime);
+      const testingTime = (ndaSubmissionDateTime - halfTestingTime) / (1000 * 60 * 60 * 24);
+      const reviewTime = (ndaApprovalDateTime - ndaSubmissionDateTime) / (1000 * 60 * 60 * 24);
+
+      const pte = testingTime / 2 + reviewTime;
+      const pteYears = Math.round(pte / 365.25 * 100) / 100;
+      const pteDays = Math.round(pte);
+
+      const finalExpirationDateTime = new Date(originalExpirationDateTime);
+      finalExpirationDateTime.setDate(finalExpirationDateTime.getDate() + pteDays);
+      const finalExpirationDate = finalExpirationDateTime.toLocaleDateString('en-US');
+
+      // Check if final expiration exceeds 14 years from NDA approval date
+      const maxExpirationDateTime = new Date(ndaApprovalDateTime);
+      maxExpirationDateTime.setDate(maxExpirationDateTime.getDate() + 365.25 * 14);
+      const maxExpirationDate = maxExpirationDateTime.toLocaleDateString('en-US');
+
+      let adjustedFinalExpirationDate = finalExpirationDate;
+      if (finalExpirationDateTime > maxExpirationDateTime) {
+        adjustedFinalExpirationDate = originalExpirationDate;
       }
-    });
 
-    function displayResult(result) {
-      const patentNumberResult = document.getElementById('patentNumberResult');
-      const originalExpirationDateResult = document.getElementById('originalExpirationDateResult');
-      const pteYearsResult = document.getElementById('pteYearsResult');
-      const pteDaysResult = document.getElementById('pteDaysResult');
-      const finalExpirationDateResult = document.getElementById('finalExpirationDateResult');
       const resultDiv = document.getElementById('result');
+      let resultHtml = '';
 
-      patentNumberResult.textContent = 'Patent Number: ' + result.patent_number;
-      originalExpirationDateResult.textContent = 'Original Expiration Date: ' + result.original_expiration_date;
-      pteYearsResult.textContent = 'Patent Term Extension (in years): ' + result.pte_years;
-      pteDaysResult.textContent = 'Patent Term Extension (in days): ' + result.pte_days;
-      finalExpirationDateResult.textContent = 'Final Expiration Date: ' + result.final_expiration_date;
+      if (adjustedFinalExpirationDate === originalExpirationDate) {
+        resultHtml = `
+          <p>The patent is not eligible for Patent Term Extension and will expire on the original expiration date.</p>
+          <p>Original Expiration Date: ${originalExpirationDate}</p>
+        `;
+      } else {
+        resultHtml = `
+          <p>Original Expiration Date: ${originalExpirationDate}</p>
+          <p>Patent Term Extension (in years): ${pteYears}</p>
+          <p>Patent Term Extension (in days): ${pteDays}</p>
+          <p>Final Expiration Date: ${adjustedFinalExpirationDate}</p>
+        `;
+      }
 
+      resultDiv.innerHTML = resultHtml;
       resultDiv.style.display = 'block';
-    }
+      document.getElementById('copyButton').style.display = 'block';
+      document.getElementById('copyButton').setAttribute('data-results', resultHtml);
+    });
+    
+    document.getElementById('copyButton').addEventListener('click', function() {
+      const results = this.getAttribute('data-results');
+      
+      const tempInput = document.createElement('input');
+      tempInput.setAttribute('value', results);
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      
+      alert('Results copied to clipboard!');
+    });
   </script>
 </body>
 </html>
